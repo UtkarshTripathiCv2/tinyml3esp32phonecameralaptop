@@ -6,11 +6,11 @@ import time
 # --- 1. SETUP FOR YOUR PHONE'S CAMERA ---
 # IMPORTANT: Replace this with the URL from the IP Webcam app on your phone.
 # Make sure to add "/video" at the end.
-PHONE_CAMERA_URL = "http://1:8080/video" # <-- PASTE YOUR PHONE'S URL HERE
+PHONE_CAMERA_URL = "http://[2402:8100:bc01]:8080/video" # <-- PASTE YOUR PHONE'S URL HERE
 
 # --- 2. SETUP FOR YOUR ESP32 ---
 # IMPORTANT: Replace this with the IP address of your ESP32.
-ESP32_IP_ADDRESS = "10.1" # <-- PASTE YOUR ESP32's IP HERE
+ESP32_IP_ADDRESS = "1054"
 blink_url = f"http://{ESP32_IP_ADDRESS}/blink"
 # ----------------------------------------
 
@@ -32,10 +32,10 @@ else:
 
     while True:
         ret, frame = video_capture.read()
-        if not ret:
-            print("Warning: Dropped frame, attempting to reconnect...")
-            # Attempt to reopen the stream if it fails
-            video_capture.open(PHONE_CAMERA_URL)
+        # If a frame was not received correctly, the connection might be unstable
+        if not ret or frame is None:
+            print("Warning: Dropped or empty frame. Check Wi-Fi connection.")
+            time.sleep(0.5) # Wait a bit before trying again
             continue
 
         # Run YOLOv8 inference on the frame from your phone
