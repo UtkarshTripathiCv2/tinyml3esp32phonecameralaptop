@@ -1,0 +1,88 @@
+#include <WiFi.h>
+
+// --- IMPORTANT: CHANGE THESE TO YOUR WI-FI DETAILS ---
+const char* ssid = "jack";
+const char* password = "samepassword";
+// ---------------------------------------------------
+
+// Create a web server on port 80
+WiFiServer server(80);
+
+// Define the pin for the built-in LED
+#define LED_PIN 2
+
+// This function will run when a request is received
+void handleBlinkRequest() {
+  Serial.println("Blink command received!");
+  digitalWrite(LED_PIN, HIGH);
+  delay(500);
+  digitalWrite(LED_PIN, LOW);
+}
+
+void setup() {
+  // --- THIS IS THE ONLY LINE THAT CHANGED ---
+  Serial.begin(9600);
+  // ------------------------------------------
+  
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+
+  // Connect to Wi-Fi
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  
+  // Print the IP address once connected
+  Serial.println("\nWiFi connected!");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  // Start the server
+  server.begin();
+  Serial.println("Web server started. Waiting for requests...");
+}
+
+void loop() {
+  WiFiClient client = server.available(); // Listen for incoming clients
+
+  if (client) { // If a new client connects
+    Serial.println("New Client.");
+    String currentLine = ""; // Make a String to hold incoming data from the client
+    while (client.connected()) {
+      if (client.available()) {
+        char c = client.read();
+        if (c == '\n') { // If you've gotten to the end of the line
+          // if the current line is blank, you got two newline characters in a row.
+          // that's the end of the client HTTP request, so send a response:
+          if (currentLine.length() == 0) {
+            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:text/html");
+            client.println(); // The HTTP headers end with a blank line
+            
+            // The actual HTML response
+            client.print("LED was blinked!");
+            
+            // Break out of the while loop
+            break;
+          } else { // if you got a newline, then clear currentLine
+            currentLine = "";
+          }
+        } else if (c != '\r') { // if you got anything else but a carriage return character
+          currentLine += c; // add it to the end of the currentLine
+          // Check if the request is for the "/blink" URL
+          if (currentLine.endsWith("GET /blink")) {
+            handleBlinkRequest();
+          }
+        }
+      }
+    }
+    // Close the connection
+    client.stop();
+    Serial.println("Client disconnected.");
+  }
+}
